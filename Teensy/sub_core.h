@@ -44,3 +44,31 @@ struct GyroData {
 };
 
 
+// --- Global Variable Declarations (Externs) ---
+extern LineData lineData;           
+extern MainCoreCommand mainCommand; // Added for MainCoreCommand usage  
+extern GyroData gyroData;       
+extern RobotStatus robot;        // Added to match Vector_Motion usage
+extern uint16_t avg_ls[34];
+extern BallData ballData;
+extern Position RobotPos;
+extern GoalData goalData;
+extern USSensor usData;
+
+
+// --- Core Function Prototypes ---
+void sub_core_init();
+int  readMux(int ch, int sig);
+void update_line_sensor();
+void fast_update_line_sensor();
+void update_gyro_sensor();
+void line_calibrate();
+
+// --- Actuators & IK Prototypes ---
+void SetMotorSpeed(uint8_t port, float speed);
+void RobotIKControl(float vx, float vy, float omega);
+void Vector_Motion(float Vx, float Vy, float rot_V);
+void FC_Vector_Motion(float WVx, float WVy, float target_heading);
+#endif
+
+
