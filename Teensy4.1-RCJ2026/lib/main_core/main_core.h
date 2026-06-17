@@ -19,20 +19,22 @@
 #define BTN_ESC 26
 
 // --- Ultrasonic ---
-#define front_us A15
-#define left_us A14
-#define back_us A16
-#define right_us A17
-#define alpha 0.15
+#define TRIG_F 2
+#define ECHO_F 6
 
-// --- Goal Localization Thresholds ---
-#define Y_LOCALIZE_THRESHOLD_L 20
-#define Y_LOCALIZE_THRESHOLD_H 70
-#define X_LOCALIZE_THRESHOLD_L 0   
-#define X_LOCALIZE_THRESHOLD_H 320
+#define TRIG_R 3
+#define ECHO_R 8
 
-#define GOAL_LOCALIZATION_C1 3335.0
+#define TRIG_B 4
+#define ECHO_B 9
 
+#define TRIG_L 5
+#define ECHO_L 10
+
+#define US_COUNT 4
+#define US_INVALID_DISTANCE 999.0f
+#define US_FILTER_ALPHA 0.35f
+#define US_INVALID_LIMIT 3
 
 // --- 1. Blueprints (Struct Definitions) ---
 // We define these so every file knows the "shape" of the data.
@@ -46,9 +48,8 @@ struct CamData {
 };
 
 struct BallData {
-    uint16_t dist = 255; uint16_t angle = 255;
-    uint16_t possession = 255; bool valid = false;
-    float Vx; float Vy;
+    uint16_t dist = 65535; uint16_t angle = 65535;
+    bool exist = false;
 };
 
 struct USSensor {
@@ -61,12 +62,14 @@ struct RobotMovement {
     uint16_t heading = 0; // Target heading in degrees
 };
 
-
-struct SubCoreData {
-    uint32_t lineState = 0x0000; // 16 sensors, 1 bit each
-    int16_t gyroHeading = 0; // 0-359 degrees
+struct BT_PacketData {
+    float posX;
+    float posY;
+    float ballDistance;
+    float ballAngle;
+    bool hasPossession;
+    int currentRole; // Sent so the teammate knows what you picked
 };
-
 
 
 // --- 3. External Variables ---
@@ -74,7 +77,6 @@ struct SubCoreData {
 extern CamData camData;
 extern BallData ballData;
 extern USSensor usData;
-extern SubCoreData subCoreData;
 extern RobotMovement robotMovement;
 extern Adafruit_SSD1306 display;
 
@@ -82,19 +84,12 @@ extern Adafruit_SSD1306 display;
 // --- Function Prototypes ---
 void main_core_init();
 void drawMessage(const char* msg);
-void readBallCam();
-void readFrontCam();
-void readussensor();
-void localization();
 void kicker_control(bool kick);
 bool UI_Interface();
-void readGyroAndLineFromSubCore();
 void sendMotor(float vx, float vy, float rot_v, int heading);
 void sendMotorAndGetSensors(float vx, float vy, float rot_v, int heading);
-void localizeRobot();
-bool move_to_position(int pos_x, int pos_y);
-void send_cam_and_pos_data();
-void update_all_sensor();
-void defense_localizeRobot();
-void sendPacket();
+void get_ball_sensor();
+void ATTACK_send_data_to_esp();
+void DEFENSE_read_data_from_esp();
+void DEFENSE_send_role_switch();
 #endif

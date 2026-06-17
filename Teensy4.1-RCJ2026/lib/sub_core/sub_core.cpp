@@ -31,29 +31,19 @@ void sub_core_init() {
     pinMode(M2, INPUT);
 
     // Motor Initialization
-    // Motor 1
-    pinMode(pwmPin1, OUTPUT);
-    analogWriteFrequency(pwmPin1, 5000); // Set to 5 kHz
-    pinMode(DIRA_1, OUTPUT);
-    pinMode(DIRB_1, OUTPUT);
-    // Motor 2
-    pinMode(pwmPin2, OUTPUT);
-    analogWriteFrequency(pwmPin2, 5000); // Set to 5 kHz
-    pinMode(DIRA_2, OUTPUT);
-    pinMode(DIRB_2, OUTPUT);
-    // Motor 3
-    pinMode(pwmPin3, OUTPUT);
-    analogWriteFrequency(pwmPin3, 5000); // Set to 5 kHz
-    pinMode(DIRA_3, OUTPUT);
-    pinMode(DIRB_3, OUTPUT);
-    // Motor 4
-    pinMode(pwmPin4, OUTPUT);
-    analogWriteFrequency(pwmPin4, 5000); // Set to 5 kHz
-    pinMode(DIRA_4, OUTPUT);
-    pinMode(DIRB_4, OUTPUT);
+    pinMode(DIR_1,OUTPUT);
+    pinMode(DIR_2,OUTPUT);
+    pinMode(DIR_3,OUTPUT);
+    pinMode(DIR_4,OUTPUT);
 
-    //LED
-    pinMode(LED_BUILTIN, OUTPUT);
+    pinMode(pwmPin1,OUTPUT);
+    pinMode(pwmPin2,OUTPUT);
+    pinMode(pwmPin3,OUTPUT);
+    pinMode(pwmPin4,OUTPUT);
+    pinMode(SLP1, OUTPUT);
+    pinMode(SLP2, OUTPUT);
+    digitalWrite(SLP1, HIGH);
+    digitalWrite(SLP2, HIGH);
 
     EEPROM.begin();
     EEPROM.get(0, avg_ls);
@@ -163,24 +153,70 @@ void update_gyro_sensor(){
 
 /* --- Actuators Part --- */
 
-void SetMotorSpeed(uint8_t port, float speed) {
-    // Constrain speed to prevent PWM overflow
-    speed = constrain(speed, -255, 255); 
-    //int pwmVal = abs((int)speed);
-    int pwmVal = abs(speed) * 255 / 100;
+void SetMotorSpeed(uint8_t port, float speed){
+  speed = constrain(speed,-1.5 * 50, 1.5 * 50);
+  int pwmVal = abs(speed) * 255 / 100;
+  switch (port){
+    case 1:
+      if(speed<0){
+        digitalWrite(DIR_1, LOW);
+        analogWrite(pwmPin1, pwmVal);
+      }
+      else if(speed>0){
+        digitalWrite(DIR_1, HIGH);
+        analogWrite(pwmPin1, pwmVal);
+      }
+      else{
+        analogWrite(pwmPin1, 0);
+      }
+      break;
+    case 2:
+      if(speed<0){
+        digitalWrite(DIR_2, LOW);
+        analogWrite(pwmPin2, pwmVal);
+      }
+      else if(speed>0){
+        digitalWrite(DIR_2, HIGH);
+        analogWrite(pwmPin2, pwmVal);
+      }
+      else{
+        analogWrite(pwmPin2, 0);
+      }
+      break;
+    case 3:
+      if(speed<0){
+        digitalWrite(DIR_3, LOW);
+        analogWrite(pwmPin3, pwmVal);
+      }
+      else if(speed>0){
+        digitalWrite(DIR_3, HIGH);
+        analogWrite(pwmPin3, pwmVal);
+      }
+      else{
+        analogWrite(pwmPin3, 0);
+      }
+      break;
+    case 4:
+      if(speed<0){
+        digitalWrite(DIR_4, LOW);
+        analogWrite(pwmPin4, pwmVal);
+      }
+      else if(speed>0){
+        digitalWrite(DIR_4, HIGH);
+        analogWrite(pwmPin4, pwmVal);
+      }
+      else{
+        analogWrite(pwmPin4, 0);
+      }
+    break;
+  }
+}
 
-    uint8_t p_pwm, p_a, p_b;
-    switch(port) {
-        case 4: p_pwm = pwmPin1; p_a = DIRA_1; p_b = DIRB_1; break;
-        case 3: p_pwm = pwmPin2; p_a = DIRA_2; p_b = DIRB_2; break;
-        case 2: p_pwm = pwmPin3; p_a = DIRA_3; p_b = DIRB_3; break;
-        case 1: p_pwm = pwmPin4; p_a = DIRA_4; p_b = DIRB_4; break;
-        default: return;
-    }
-
-    analogWrite(p_pwm, pwmVal);
-    digitalWrite(p_a, (speed > 0) ? HIGH : LOW);
-    digitalWrite(p_b, (speed < 0) ? HIGH : LOW);
+void MotorStop(){
+  analogWrite(pwmPin1, 0);
+  analogWrite(pwmPin2, 0);
+  analogWrite(pwmPin3, 0);
+  analogWrite(pwmPin4, 0);
 }
 
 void RobotIKControl(float vx, float vy, float omega) {
@@ -193,7 +229,7 @@ void RobotIKControl(float vx, float vy, float omega) {
     SetMotorSpeed(1, p1);
     SetMotorSpeed(2, p2);
     SetMotorSpeed(3, p3);
-    SetMotorSpeed(4, p4*0.7);
+    SetMotorSpeed(4, p4);
 }
 
 void Vector_Motion(float Vx, float Vy, float rot_V) {  

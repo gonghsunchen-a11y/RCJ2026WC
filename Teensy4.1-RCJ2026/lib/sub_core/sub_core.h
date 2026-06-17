@@ -14,34 +14,28 @@
 #define M1 A0
 #define M2 A1
 
-// Motor 4 Pins
-#define pwmPin1 2    // PWM 控制腳
-#define DIRA_1 3   // 方向控制腳1
-#define DIRB_1 4
 
-// Motor 3 Pins
-#define pwmPin2 10    // PWM 控制腳
-#define DIRA_2 11   // 方向控制腳1
-#define DIRB_2 12
+//Motor1
+#define DIR_1 37   // 方向控制腳1
+#define pwmPin1 4    // PWM 控制腳
 
-// Motor 2 Pins
+//Motor2
+#define DIR_2 11    // 方向控制腳2
+#define pwmPin2 6    // PWM 控制腳
+
+//Motor3
+#define DIR_3 10    // 方向控制腳3
 #define pwmPin3 5    // PWM 控制腳
-#define DIRA_3 6   // 方向控制腳1
-#define DIRB_3 9
 
-// Motor 1 Pins
-#define pwmPin4 23  // PWM 控制腳
-#define DIRA_4 37    // 方向控制腳1
-#define DIRB_4 36 
+//Motor4
+#define DIR_4 36    // 方向控制腳4
+#define pwmPin4 3    // PWM 控制腳
+
+#define SLP1 23    
+#define SLP2 12
 
 #define LS_count 32
-#define Front_LS A7
-#define Mid_LS A6
 
-#define LS_MASK_FRONT  0x00000FE0UL
-#define LS_MASK_RIGHT  0x001FF000UL
-#define LS_MASK_BACK   0x0FE00000UL
-#define LS_MASK_LEFT   0xF000001FUL
 
 // --- Data Structures ---
 
@@ -123,6 +117,7 @@ void line_calibrate();
 
 // --- Actuators & IK Prototypes ---
 void SetMotorSpeed(uint8_t port, float speed);
+void MotorStop();
 void RobotIKControl(float vx, float vy, float omega);
 void Vector_Motion(float Vx, float Vy, float rot_V);
 void FC_Vector_Motion(float WVx, float WVy, float target_heading);
