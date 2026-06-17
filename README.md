@@ -13,5 +13,5 @@
   - Dribbler API
   - Kicker API
 - ESP32(Dual Core)
-  - BLE API
-  - Ball Sensor API
+  - BLE API(Core 1)
+  - Ball Sensor API(Core 0)
