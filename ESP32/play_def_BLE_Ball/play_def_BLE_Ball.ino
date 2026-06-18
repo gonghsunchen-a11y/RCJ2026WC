@@ -2,27 +2,19 @@
 
 unsigned long lastNoBallSend = 0;   // For 10 Hz "no ball" message
 
-uint8_t max_index = 0xff;
-uint8_t dis = 0;
-uint8_t max_port = 0xff;
+uint8_t distance;
+uint8_t max_port;
 
 TaskHandle_t Task1;
 TaskHandle_t Task2;
 
-/*10
-uint16_t ir_port[IR_Port_Count] = {0,2,3,4,5,7,8,10,13,15};
-uint8_t ir_pins[IR_Port_Count]  = {5,7,8,10,11,13,15,17,1,3};
-uint16_t ir_weight[IR_Port_Count];
-*/
 uint8_t ir_pins[IR_Port_Count]  = {1,3,5,6,8,10,12,14,15,17};
 uint16_t ir_weight[IR_Port_Count];
 
 volatile bool read_done_flag = false;
-uint8_t ball_possession = 0;
 
 void rgbLEDWrite(uint8_t red_val, uint8_t green_val, uint8_t blue_val) {
   rmt_data_t led_data[24];
-  rmtInit(38, RMT_TX_MODE, RMT_MEM_NUM_BLOCKS_1, 10000000);
   // default WS2812B color order is G, R, B
   int color[3] = {red_val, green_val, blue_val};
   int i = 0;
@@ -49,12 +41,13 @@ void rgbLEDWrite(uint8_t red_val, uint8_t green_val, uint8_t blue_val) {
 
 // ============ IR Reading ============
 void IR_reading() {
-  max_index = 0xff;
-  dis = 0;
+  dist = 0x00;
   max_port = 0xff;
+  
   for (uint8_t i = 0; i < IR_Port_Count; i++) {
     ir_weight[i] = 0;
   }
+  
   uint64_t start = micros();
   while (micros() - start < 833) {
     for (uint8_t i = 0; i < IR_Port_Count; i++) {
@@ -63,12 +56,14 @@ void IR_reading() {
       }
     }
   }
+  
   for (uint8_t i = 0; i < IR_Port_Count; i++) {
     if(ir_weight[i] > 0){
-      dis = dis + 1;
+      dist = dist + 1;
     }
   }
-  if(dis){
+  
+  if(dist){
     uint16_t max_value = 0;
     for (uint8_t i = 0; i < IR_Port_Count; i++) {
       if(ir_weight[i] > max_value) {
@@ -77,13 +72,12 @@ void IR_reading() {
       }
     }
     max_port = ir_port[max_index];
-    dis = IR_Port_Count + 1 - dis;
+    dist = IR_Port_Count + 1 - dist;
   }
   else{
     dis = 0;
     max_index = 0xff;
   }
-  ball_possession = (uint8_t)(255 * (analogRead(9) / 4096.0));
   read_done_flag = true;
 }
 
@@ -91,14 +85,32 @@ void IR_reading() {
 void setup() {
   Serial.begin(115200);
   Serial0.begin(115200);
-  pinMode(9,INPUT);
+  rmtInit(38, RMT_TX_MODE, RMT_MEM_NUM_BLOCKS_1, 10000000);
   rgbLEDWrite(125,0,0);
-  for (uint8_t i = 0; i < 16; i++) {
-    pinMode(i, INPUT_PULLUP);
-  }
+
   for (uint8_t i = 0; i < IR_Port_Count; i++) {
     pinMode(ir_pins[i], INPUT_PULLUP);
   }
+
+  BLEDevice::init("POD");
+  pServer = BLEDevice::createServer();
+  pServer->setCallbacks(new MyServerCallbacks());
+
+  BLEService *pService = pServer->createService(SERVICE_UUID);
+
+  pDataCharacteristic = pService->createCharacteristic(
+    DATA_CHARACTERISTIC_UUID,
+    BLECharacteristic::PROPERTY_WRITE
+  );
+  pDataCharacteristic->setCallbacks(new MyDataCallbacks());
+
+  pService->start();
+
+  BLEAdvertising *pAdvertising = BLEDevice::getAdvertising();
+  pAdvertising->addServiceUUID(SERVICE_UUID);
+  pAdvertising->setScanResponse(true);
+  pAdvertising->start();
+  
   xTaskCreatePinnedToCore(Task1code, "Task1", 10000, NULL, 1, &Task1, 0);
   xTaskCreatePinnedToCore(Task2code, "Task2", 10000, NULL, 1, &Task2, 1);
 }
