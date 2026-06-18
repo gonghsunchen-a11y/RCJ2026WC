@@ -62,6 +62,7 @@ void main_core_init() {
 
     pinMode(COM_O1_PIN, INPUT);
     pinMode(COM_O2_PIN, INPUT);
+    setupUS();
 }
 
 void drawMessage(const char* msg) {
@@ -317,6 +318,65 @@ bool UI_Interface(){
             break;
     }
     return true;
+}
+
+
+void echoISR(uint8_t i) {
+  if (digitalRead(echoPins[i]) == HIGH) echo_start[i] = micros();
+  else { echo_duration[i] = micros() - echo_start[i]; echo_done[i] = true; }
+}
+void echoFrontISR() { echoISR(US_FRONT); }
+void echoRightISR() { echoISR(US_RIGHT); }
+void echoBackISR()  { echoISR(US_BACK);  }
+void echoLeftISR()  { echoISR(US_LEFT);  }
+
+void triggerUS(uint8_t i) {
+  digitalWrite(trigPins[i], LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPins[i], HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPins[i], LOW);
+}
+
+void updateFilteredUS(uint8_t i, float raw) {
+  us_invalid_count[i] = 0;
+  us_dist_cm[i] = isValidUS(us_dist_cm[i])
+    ? us_dist_cm[i] * (1.0f - US_FILTER_ALPHA) + raw * US_FILTER_ALPHA
+    : raw;
+}
+
+void markInvalidUS(uint8_t i) {
+  if (us_invalid_count[i] < US_INVALID_LIMIT) us_invalid_count[i]++;
+  if (us_invalid_count[i] >= US_INVALID_LIMIT) us_dist_cm[i] = US_INVALID_DISTANCE;
+}
+
+void updateUS() {
+  if (millis() - last_trigger_time >= 50) {
+    last_trigger_time = millis();
+    current_us = (current_us + 1) % US_COUNT;
+    echo_done[current_us] = false;
+    triggerUS(current_us);
+  }
+  for (uint8_t i = 0; i < US_COUNT; i++) {
+    if (!echo_done[i]) continue;
+    noInterrupts();
+    uint32_t dur = echo_duration[i];
+    echo_done[i] = false;
+    interrupts();
+    (dur > 100 && dur < 12000)? updateFilteredUS(i, dur * 0.0343f / 2.0f) : markInvalidUS(i);
+  }
+}
+
+void setupUS() {
+  for (uint8_t i = 0; i < US_COUNT; i++) {
+    pinMode(trigPins[i], OUTPUT);
+    pinMode(echoPins[i], INPUT);
+    digitalWrite(trigPins[i], LOW);
+  }
+  attachInterrupt(digitalPinToInterrupt(ECHO_F), echoFrontISR, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(ECHO_R), echoRightISR, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(ECHO_B), echoBackISR,  CHANGE);
+  attachInterrupt(digitalPinToInterrupt(ECHO_L), echoLeftISR,  CHANGE);
 }
 
 
