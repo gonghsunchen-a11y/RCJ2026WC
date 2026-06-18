@@ -115,4 +115,19 @@ void update_all_sensor();
 void sendMotor(float vx, float vy, float rot_v, int heading);
 void stopMotors();
 bool UI_Interface();
+void triggerUS(uint8_t i);
+void updateFilteredUS(uint8_t i, float raw);
+void markInvalidUS(uint8_t i);
+void updateUS();
+void setupUS();
+
+
+void echoISR(uint8_t i) {
+  if (digitalRead(echoPins[i]) == HIGH) echo_start[i] = micros();
+  else { echo_duration[i] = micros() - echo_start[i]; echo_done[i] = true; }
+}
+void echoFrontISR() { echoISR(US_FRONT); }
+void echoRightISR() { echoISR(US_RIGHT); }
+void echoBackISR()  { echoISR(US_BACK);  }
+void echoLeftISR()  { echoISR(US_LEFT);  }
 #endif
