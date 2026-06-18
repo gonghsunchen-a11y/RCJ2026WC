@@ -19,22 +19,17 @@
 #define BTN_ESC 26
 
 // --- Ultrasonic ---
-#define TRIG_F 2
-#define ECHO_F 6
+// Ultrasonic pins
+#define TRIG_F 2  #define ECHO_F 6
+#define TRIG_R 3  #define ECHO_R 8
+#define TRIG_B 4  #define ECHO_B 9
+#define TRIG_L 5  #define ECHO_L 10
 
-#define TRIG_R 3
-#define ECHO_R 8
-
-#define TRIG_B 4
-#define ECHO_B 9
-
-#define TRIG_L 5
-#define ECHO_L 10
-
-#define US_COUNT 4
+#define US_COUNT            4
 #define US_INVALID_DISTANCE 999.0f
-#define US_FILTER_ALPHA 0.35f
-#define US_INVALID_LIMIT 3
+#define US_FILTER_ALPHA     0.35f
+#define US_INVALID_LIMIT    3
+
 
 #define COM_O1_PIN 37
 #define COM_O2_PIN 36
@@ -79,6 +74,21 @@ struct RobotMonitor {
     uint8_t ball_dist = 0; // 0-15 (4 bits)
     uint8_t ball_angle = 0; // 0-255 (8 bits)
 };
+
+
+enum USIndex   { US_FRONT = 0, US_RIGHT = 1, US_BACK = 2, US_LEFT = 3 };
+
+MainState state = READY;
+
+const uint8_t trigPins[US_COUNT] = { TRIG_F, TRIG_R, TRIG_B, TRIG_L };
+const uint8_t echoPins[US_COUNT] = { ECHO_F, ECHO_R, ECHO_B, ECHO_L };
+
+volatile uint32_t echo_start[US_COUNT]    = {0};
+volatile uint32_t echo_duration[US_COUNT] = {0};
+volatile bool     echo_done[US_COUNT]     = {false};
+
+float   us_dist_cm[US_COUNT]       = { US_INVALID_DISTANCE, US_INVALID_DISTANCE, US_INVALID_DISTANCE, US_INVALID_DISTANCE };
+
 
 // --- 3. External Variables ---
 // These tell the compiler "The actual memory for these is in main.cpp"
