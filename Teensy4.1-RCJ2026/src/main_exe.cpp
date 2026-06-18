@@ -3,11 +3,28 @@
 unsigned long last_1000hz_tick = 0;
 unsigned long last_50hz_tick = 0;
 
+//#define DEFAULT_ROLE 1 // 1: offense, 2: defense
+#define DEFAULT_ROLE 2 // 1: offense, 2: defense
+
 void setup() {
     main_core_init();
-    /*
-    Wait Sub-Core to be ready.
-    */
+    while(1) {
+        drawMessage("Waiting for SubCore...");
+        if(DEFAULT_ROLE == 1) {// 1: offense, 2: defense
+            Serial8.write(0x0A);
+        } else if(DEFAULT_ROLE == 2) {// 1: offense, 2: defense
+            Serial8.write(0x0D);
+        }
+        // Wait a short moment for the sub-core to respond 
+        if(Serial8.available() > 0) {
+            if(Serial8.read() == PROTOCAL_ACT) {
+                break; // Connection confirmed
+            }
+        }
+    }    
+    while(UI_Interface()) {
+        ;
+    }
 }
 
 
@@ -16,9 +33,8 @@ unsigned long last_1hz_tick = 0;
 unsigned long last_ball_request_tick = 0; // 新增：非阻塞球資訊請求計時器
 
 void loop() {
-    while(!digitalRead(COM_O1_PIN)) {
-        stopMotors();
-    }
+    stopMotors();
+    while(!digitalRead(COM_O1_PIN));
     while (1) {
         unsigned long current_micros = micros(); // 統一使用微秒，精準且減少暫存器切換
 
@@ -26,7 +42,7 @@ void loop() {
         // 核心底層：全速非阻塞序列埠引擎 (盲抽緩衝區，0等待)
         // ==================================================================
         // 不管現在是幾 Hz，只要序列埠有不完整的字節進來，立刻抽空或解析，絕不卡死
-        parseSerial6Stream(); 
+        parseESP32(); 
 
         // ==================================================================
         // 1. 低頻排程 (50Hz = 20000 微秒)：主動發送請求（僅發送，不等待）
@@ -56,6 +72,9 @@ void loop() {
             last_1000hz_tick = current_micros;
             //TODO; 
         }
+        // ==================================================================
+        // 3. 高頻核心控制迴圈 (1000Hz = 1000 微秒)
+        // ==================================================================       
         if (current_micros - last_1hz_tick >= 1000000) { // 1Hz = 1,000,000 微秒
             last_1hz_tick = current_micros;
             if (digitalReadFast(COM_O1_PIN) == HIGH) {
