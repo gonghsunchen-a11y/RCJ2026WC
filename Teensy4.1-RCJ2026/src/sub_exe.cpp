@@ -1,4 +1,8 @@
 #include "sub_core.h"
+#include "sub_core.h"
+
+#define DtoR_const 0.0174529f
+
 uint8_t role = 0; // 0: default, 1: defense, 2: offense
 void setup() {
     sub_core_init();
@@ -27,7 +31,38 @@ void setup() {
     }
     digitalWrite(LED_BUILTIN, LOW); // Indicate setup complete
 }
+int count = 0;
+void defense_mode() {
+    update_gyro_sensor();
+    update_line_sensor(); 
 
+    for(uint8_t i = 0; i < 32; i++){
+      Serial.printf("%d", (lineData.state >> i) & 1);
+    }
+    Serial.println("");
+
+    float vx = 0;
+    float vy = 0;
+
+    // 右半邊：S25 ~ S07 (繞過 S00)，每顆對應自己的角度
+    for (int i = -7; i <= 7; i++) {
+        uint8_t idx = (0 + i + 32) % 32;
+        if (!((lineData.state >> idx) & 1)) {
+            float deg = idx * 11.25f;
+            float rad = deg * DtoR_const;
+            vx = 20 * cos(rad);
+            vy = 20 * sin(rad);
+
+            Serial.print("S");
+            Serial.print(idx);
+            Serial.print(" on line, moving ");
+            Serial.print(deg);
+            Serial.println(" deg");
+        }
+    }
+
+    Vector_Motion(vx, vy, 0);
+}
 void loop(){
   while(1){
     update_gyro_sensor();
@@ -37,7 +72,7 @@ void loop(){
       Serial.printf("%d", (lineData.state >> i) & 1);
     }
     Serial.println();
-    if (Serial8.available()) {
+    if (Serial8.available()) {  
       uint8_t cmd = Serial8.read();
       //Serial.print(cmd);
       if(cmd == LS_CAL_START) {
@@ -82,8 +117,8 @@ void loop(){
       }
     }
   }
-  digitalWrite(LED_BUILTIN, HIGH); // Toggle LED for visual feedback
+  //digitalWrite(LED_BUILTIN, HIGH); // Toggle LED for visual feedback
   while(1){
- //   defense_mode();
+    defense_mode();
   }
-}
+}   

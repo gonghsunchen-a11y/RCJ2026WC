@@ -24,6 +24,11 @@ void setup() {
     while(UI_Interface()) {
         ;
     }
+    Serial8.read(); // Clear the MOVE_CMD from the buffer
+    while(Serial8.read() != PROTOCAL_ACT) {
+        Serial8.write(MOVE_CMD); // Tell SubCore to start sending commands
+    }
+
 }
 
 void loop() {
