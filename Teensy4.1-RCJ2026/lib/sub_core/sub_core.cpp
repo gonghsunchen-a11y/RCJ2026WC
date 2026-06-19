@@ -18,7 +18,7 @@ void sub_core_init() {
     Serial8.begin(921600); // For communication with MainCore
     Serial2.begin(115200); // For gyro sensor
     Serial.begin(115200);  // For debugging
-
+    pinMode(LED_BUILTIN, OUTPUT);
     // Multiplexer Control
     pinMode(s0, OUTPUT);
     pinMode(s1, OUTPUT);

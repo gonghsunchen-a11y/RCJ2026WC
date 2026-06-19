@@ -1,0 +1,35 @@
+#include <main_core.h>
+
+
+//#define DEFAULT_ROLE 1 // 1: offense, 2: defense
+#define DEFAULT_ROLE 2 // 1: offense, 2: defense
+
+void setup() {
+    main_core_init();
+    drawMessage("init");
+    delay(500);
+    while(1) {
+        if(DEFAULT_ROLE == 1) {// 1: offense, 2: defense
+            Serial8.write(0x0A);
+        } else if(DEFAULT_ROLE == 2) {// 1: offense, 2: defense
+            Serial8.write(0x0D);
+        }
+        // Wait a short moment for the sub-core to respond 
+        if(Serial8.available() > 0) {
+            if(Serial8.read() == PROTOCAL_ACT) {
+                break; // Connection confirmed
+            }
+        }
+    }    
+    while(UI_Interface()) {
+        ;
+    }
+}
+
+void loop() {
+    // Wait for UI to finish
+    while(UI_Interface()) {
+        ;
+    }
+    Serial8.read(); // Clear the MOVE_CMD from the buffer
+}

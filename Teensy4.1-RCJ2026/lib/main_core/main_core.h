@@ -20,10 +20,14 @@
 
 // --- Ultrasonic ---
 // Ultrasonic pins
-#define TRIG_F 2  #define ECHO_F 6
-#define TRIG_R 3  #define ECHO_R 8
-#define TRIG_B 4  #define ECHO_B 9
-#define TRIG_L 5  #define ECHO_L 10
+#define TRIG_F 2  
+#define ECHO_F 6
+#define TRIG_R 3  
+#define ECHO_R 8
+#define TRIG_B 4  
+#define ECHO_B 9
+#define TRIG_L 5  
+#define ECHO_L 10
 
 #define US_COUNT            4
 #define US_INVALID_DISTANCE 999.0f
@@ -78,16 +82,14 @@ struct RobotMonitor {
 
 enum USIndex   { US_FRONT = 0, US_RIGHT = 1, US_BACK = 2, US_LEFT = 3 };
 
-MainState state = READY;
-
 const uint8_t trigPins[US_COUNT] = { TRIG_F, TRIG_R, TRIG_B, TRIG_L };
 const uint8_t echoPins[US_COUNT] = { ECHO_F, ECHO_R, ECHO_B, ECHO_L };
 
-volatile uint32_t echo_start[US_COUNT]    = {0};
-volatile uint32_t echo_duration[US_COUNT] = {0};
-volatile bool     echo_done[US_COUNT]     = {false};
+//volatile uint32_t echo_start[US_COUNT]    = {0};
+//volatile uint32_t echo_duration[US_COUNT] = {0};
+//volatile bool     echo_done[US_COUNT]     = {false};
 
-float   us_dist_cm[US_COUNT]       = { US_INVALID_DISTANCE, US_INVALID_DISTANCE, US_INVALID_DISTANCE, US_INVALID_DISTANCE };
+//float   us_dist_cm[US_COUNT]       = { US_INVALID_DISTANCE, US_INVALID_DISTANCE, US_INVALID_DISTANCE, US_INVALID_DISTANCE };
 
 
 // --- 3. External Variables ---
@@ -118,7 +120,7 @@ bool UI_Interface();
 void triggerUS(uint8_t i);
 void updateUS();
 
-
+/*
 void echoISR(uint8_t i) {
   if (digitalRead(echoPins[i]) == HIGH) echo_start[i] = micros();
   else { echo_duration[i] = micros() - echo_start[i]; echo_done[i] = true; }
@@ -127,5 +129,6 @@ void echoFrontISR() { echoISR(US_FRONT); }
 void echoRightISR() { echoISR(US_RIGHT); }
 void echoBackISR()  { echoISR(US_BACK);  }
 void echoLeftISR()  { echoISR(US_LEFT);  }
-
+8
+*/
 #endif

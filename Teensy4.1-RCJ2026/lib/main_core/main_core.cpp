@@ -38,14 +38,14 @@ void main_core_init() {
 
     Wire.begin();
     Wire.setClock(400000); // Fast I2C for OLED
-/*
+
     if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) {
         for(;;); // Lock if OLED fails
     }
 
     display.clearDisplay();
     display.setTextColor(SSD1306_WHITE);
-*/    
+    
     // Pin Setups
     pinMode(Charge_Pin, OUTPUT);
     pinMode(Kicker_Pin, OUTPUT);
@@ -67,10 +67,12 @@ void main_core_init() {
     pinMode(echoPins[i], INPUT);
     digitalWrite(trigPins[i], LOW);
     }
+    /*
     attachInterrupt(digitalPinToInterrupt(ECHO_F), echoFrontISR, CHANGE);
     attachInterrupt(digitalPinToInterrupt(ECHO_R), echoRightISR, CHANGE);
     attachInterrupt(digitalPinToInterrupt(ECHO_B), echoBackISR,  CHANGE);
     attachInterrupt(digitalPinToInterrupt(ECHO_L), echoLeftISR,  CHANGE);
+    */
 }
 
 void drawMessage(const char* msg) {
@@ -285,10 +287,6 @@ bool UI_Interface(){
                 display.setCursor(0, 0);
                 display.printf("ball dist: %d\n", ballData.dist);
                 display.printf("ball angle: %d\n",ballData.angle);
-                display.printf("us f: %d\n", usData.dist_f);
-                display.printf("us l: %d\n", usData.dist_l);
-                display.printf("us r: %d\n", usData.dist_r);
-                display.printf("us b: %d\n", usData.dist_b);
                 display.display();
                 lastDisplayTime = millis();
             }
@@ -327,7 +325,7 @@ bool UI_Interface(){
     }
     return true;
 }
-
+/*
 void triggerUS(uint8_t i) {
   digitalWrite(trigPins[i], LOW);
   delayMicroseconds(2);
@@ -337,6 +335,8 @@ void triggerUS(uint8_t i) {
 }
 
 void updateUS() {
+    static uint32_t last_trigger_time = 0;
+    uint8_t current_us = 0;
   if (millis() - last_trigger_time >= 50) {
     last_trigger_time = millis();
     current_us = (current_us + 1) % US_COUNT;
@@ -350,6 +350,7 @@ void updateUS() {
     uint32_t dur = echo_duration[i];
     echo_done[i] = false;
     interrupts();
+    
     if (dur > 100 && dur < 12000) {
       float raw = dur * 0.0343f / 2.0f;
       us_invalid_count[i] = 0;
@@ -362,4 +363,4 @@ void updateUS() {
   }
 }
 
-
+*/
