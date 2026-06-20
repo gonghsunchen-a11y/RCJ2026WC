@@ -1,0 +1,234 @@
+//slave
+#include <BLEDevice.h>
+
+#define SERVICE_UUID                 "08001234-1234-4321-4321-123456789012"
+#define DATA_CHARACTERISTIC_UUID     "66666666-6666-6666-6666-666666666666"
+#define SECRET_KEY                   0x66
+#define AUTH_PASSWORD                0x66
+
+#define LED_BLINK_INTERVAL           300   // 斷線/掃描時的閃爍間隔(ms)
+
+typedef struct {
+  uint8_t ball_dist;
+  uint8_t ball_angle;
+  int8_t robot_x;
+  int8_t robot_y;
+} RobotData;
+
+RobotData myData;
+
+static bool doConnect = false;
+static bool connected = false;
+static BLEAddress *pServerAddress = NULL; 
+static BLERemoteCharacteristic *pDataCharacteristic = NULL;
+static BLEClient *pClient = NULL;
+
+bool rescanPending = false;
+
+#define TEENSY_SERIAL Serial0
+
+// ---- LED 狀態燈用變數 ----
+unsigned long lastBlinkTime = 0;
+bool blinkState = false;
+
+void rgbLEDWrite(uint8_t r, uint8_t g, uint8_t b) {
+  rmt_data_t led_data[24];
+  int color[3] = {r, g, b};
+  int i = 0;
+  for (int col = 0; col < 3; col++) {
+    for (int bit = 0; bit < 8; bit++) {
+      if (color[col] & (1 << (7 - bit))) {
+        led_data[i].level0 = 1; led_data[i].duration0 = 8;
+        led_data[i].level1 = 0; led_data[i].duration1 = 4;
+      } else {
+        led_data[i].level0 = 1; led_data[i].duration0 = 4;
+        led_data[i].level1 = 0; led_data[i].duration1 = 8;
+      }
+      i++;
+    }
+  }
+  rmtWrite(38, led_data, RMT_SYMBOLS_OF(led_data), RMT_WAIT_FOR_EVER);
+}
+
+void updateLED() {
+  if (connected) {
+    rgbLEDWrite(160, 0, 255); // 連線成功：恆亮紫
+  } else {
+    if (millis() - lastBlinkTime >= LED_BLINK_INTERVAL) {
+      lastBlinkTime = millis();
+      blinkState = !blinkState;
+      if (blinkState) {
+        rgbLEDWrite(160, 0, 255);
+      } else {
+        rgbLEDWrite(0, 0, 0);
+      }
+    }
+  }
+}
+
+// 🚀 新增：雙向通訊 - 接收來自 Master 的資料回調
+static void notifyCallback(
+  BLERemoteCharacteristic* pBLERemoteCharacteristic,
+  uint8_t* pData,
+  size_t length,
+  bool isNotify) {
+    
+    // 假設 Master 回傳 4 位元組的控制指令（例如馬達速度或戰術代號）
+    if (length == 4) {
+      uint8_t decryptedCmd[4];
+      decryptedCmd[0] = pData[0] ^ SECRET_KEY;
+      decryptedCmd[1] = pData[1] ^ SECRET_KEY;
+      decryptedCmd[2] = pData[2] ^ SECRET_KEY;
+      decryptedCmd[3] = pData[3] ^ SECRET_KEY;
+
+      // 將 Master 的指令轉發給 Teensy (定義新協議格式: 0xCC ... 0xDD)
+      TEENSY_SERIAL.write(0xCC); 
+      TEENSY_SERIAL.write(decryptedCmd, 4);
+      TEENSY_SERIAL.write(0xDD);
+
+      Serial.print("📥 BLE Recv from Master -> Decrypted: ");
+      Serial.flush(); // 這裡只做序列埠排錯列印
+      for(int i=0; i<4; i++) { Serial.print(decryptedCmd[i]); Serial.print(" "); }
+      Serial.println();
+    }
+}
+
+void scanCompleteCB(BLEScanResults foundDevices) {}
+
+class MyClientCallbacks : public BLEClientCallbacks {
+  void onConnect(BLEClient *pclient) {
+    connected = true;
+    Serial.println("BLE Connected");
+  }
+  void onDisconnect(BLEClient *pclient) {
+    connected = false;
+    pDataCharacteristic = NULL; 
+    Serial.println("BLE Disconnected");
+    rescanPending = true; 
+  }
+};
+
+class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
+  void onResult(BLEAdvertisedDevice advertisedDevice) {
+    if (advertisedDevice.isAdvertisingService(BLEUUID(SERVICE_UUID))) {
+      Serial.println("Found Master ESP32!");
+      advertisedDevice.getScan()->stop(); 
+      if (pServerAddress != NULL) {
+        delete pServerAddress;
+      }
+      pServerAddress = new BLEAddress(advertisedDevice.getAddress());
+      doConnect = true;
+    }
+  }
+};
+
+bool connectToServer(BLEAddress pAddress) {
+  if (pClient != NULL) {
+    delete pClient;
+    pClient = NULL;
+  }
+
+  pClient = BLEDevice::createClient();
+  pClient->setClientCallbacks(new MyClientCallbacks());
+
+  if (!pClient->connect(pAddress)) {
+    Serial.println("Connection failed");
+    return false;
+  }
+
+  BLERemoteService *pRemoteService = pClient->getService(SERVICE_UUID);
+  if (!pRemoteService) {
+    Serial.println("Service not found");
+    pClient->disconnect();
+    return false;
+  }
+
+  pDataCharacteristic = pRemoteService->getCharacteristic(DATA_CHARACTERISTIC_UUID);
+  if (!pDataCharacteristic) {
+    Serial.println("Characteristic not found");
+    pClient->disconnect();
+    return false;
+  }
+
+  connected = true;
+
+  // 🚀 核心修改：註冊監聽，允許 Master 傳送資料過來時觸發通知
+  if(pDataCharacteristic->canNotify()) {
+    pDataCharacteristic->registerForNotify(notifyCallback);
+    Serial.println("Registered for Master Notifications successfully.");
+  }
+
+  // 連線成功後發送驗證密碼
+  uint8_t pwdBuf[4];
+  uint32_t pwd = AUTH_PASSWORD;
+  memcpy(pwdBuf, &pwd, 4);
+  pDataCharacteristic->writeValue(pwdBuf, 4, false);
+  Serial.println("已送出驗證密碼");
+
+  return true;
+}
+
+void setup() {
+  Serial.begin(115200);
+  TEENSY_SERIAL.begin(115200, SERIAL_8N1, 44, 43);
+  rmtInit(38, RMT_TX_MODE, RMT_MEM_NUM_BLOCKS_1, 10000000);
+  rgbLEDWrite(160, 0, 255);
+
+  BLEDevice::init("");
+  BLEScan *pBLEScan = BLEDevice::getScan();
+  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+  pBLEScan->setActiveScan(true);
+  
+  pBLEScan->start(0, scanCompleteCB, false);   
+  Serial.println("---Slave ready & Scanning infinitely (Non-blocking)---");
+}
+
+void loop() {
+  updateLED(); 
+
+  if (doConnect && pServerAddress != NULL) {
+    doConnect = false;
+    if (connectToServer(*pServerAddress)) {
+      Serial.println("Connected to Master");
+    } else {
+      Serial.println("Connect failed, resuming infinite scan...");
+      rescanPending = true; 
+    }
+  }
+
+  if (rescanPending) {
+    rescanPending = false;
+    Serial.println("Restarting Continuous BLE Scan...");
+    BLEDevice::getScan()->start(0, scanCompleteCB, false); 
+  }
+
+  // 方向 A：Teensy ➡️ ESP32 Slave ➡️ Master BLE
+  if (connected && pDataCharacteristic != NULL) {
+    TEENSY_SERIAL.write(0xAA);
+
+    unsigned long t = millis();
+    while (TEENSY_SERIAL.available() < 6) {
+      if (millis() - t > 100) break;
+    }
+
+    if (TEENSY_SERIAL.available() >= 6) {
+      if (TEENSY_SERIAL.read() == 0xBB) {
+        myData.ball_dist  = TEENSY_SERIAL.read();
+        myData.ball_angle = TEENSY_SERIAL.read();
+        myData.robot_x    = TEENSY_SERIAL.read();
+        myData.robot_y    = TEENSY_SERIAL.read();
+        uint8_t end       = TEENSY_SERIAL.read();
+
+        if (end == 0xEE) {
+          uint8_t buf[4];
+          buf[0] = myData.ball_dist  ^ SECRET_KEY;
+          buf[1] = myData.ball_angle ^ SECRET_KEY;
+          buf[2] = myData.robot_x    ^ SECRET_KEY;
+          buf[3] = myData.robot_y    ^ SECRET_KEY;
+          
+          pDataCharacteristic->writeValue(buf, 4, false);
+        }
+      }
+    }
+  }
+}
