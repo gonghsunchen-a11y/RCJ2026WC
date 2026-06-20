@@ -79,8 +79,30 @@ struct USSensor {
     uint16_t dist_b = 0; uint16_t dist_l = 0;
     uint16_t dist_r = 0; uint16_t dist_f = 0;
 };
+enum class RobotRole : int8_t {
+    DEFAULT = 0,
+    DEFENSE = 1,
+    OFFENSE = 2
+};
 
+enum class RobotState : uint8_t { STATE_READY, STATE_CALIBRATING, STATE_SAVING };
 
+// 2. Robot state structure
+struct RobotMonitor {
+    RobotRole role = RobotRole::DEFAULT; // Uses the custom enum type with a default value
+    RobotState currentState = RobotState::STATE_READY;
+    int8_t pos_x = 0; 
+    int8_t pos_y = 0;
+    bool has_possession = false;
+    float vx = 0.0f; 
+    float vy = 0.0f; 
+    float rot_v = 0.0f;
+    uint16_t heading = 0; // Target heading in degrees
+    //for teammate data:
+    uint16_t ball_dist = 0; // 0-15 (4 bits)
+    uint16_t ball_angle = 0; // 0-255 (8 bits)
+    bool ball_valid = false;
+};
 
 // Robot global configuration and tuning parameters
 struct RobotStatus {
@@ -105,7 +127,7 @@ extern BallData ballData;
 extern Position RobotPos;
 extern GoalData goalData;
 extern USSensor usData;
-
+extern RobotMonitor subMonitor;
 
 // --- Core Function Prototypes ---
 void sub_core_init();
@@ -125,4 +147,5 @@ void readMotor();
 void readMotorandSendSensors();
 void read_cam_and_pos_data();
 void readMainPacket();;
+void readMaincoreData();
 #endif

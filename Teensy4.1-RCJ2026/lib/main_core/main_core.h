@@ -43,7 +43,7 @@ struct TopMaixData {int16_t x = 0;int16_t y = 0;uint8_t status = 0;bool valid = 
 
 struct BallData {
     uint16_t dist = 65535; uint16_t angle = 65535;
-    bool exist = false;
+    bool valid = false;
 };
 
 struct USSensor {
@@ -67,7 +67,7 @@ enum class RobotState : uint8_t { STATE_READY, STATE_CALIBRATING, STATE_SAVING }
 struct RobotMonitor {
     RobotRole role = RobotRole::DEFAULT; // Uses the custom enum type with a default value
     RobotState currentState = RobotState::STATE_READY;
-    int8_t pos_x = 0; 
+    int8_t pos_x = 0;
     int8_t pos_y = 0;
     bool has_possession = false;
     float vx = 0.0f; 
@@ -75,8 +75,9 @@ struct RobotMonitor {
     float rot_v = 0.0f;
     uint16_t heading = 0; // Target heading in degrees
     //for teammate data:
-    uint8_t ball_dist = 0; // 0-15 (4 bits)
-    uint8_t ball_angle = 0; // 0-255 (8 bits)
+    uint16_t ball_dist = 0; // 0-15 (4 bits)
+    uint16_t ball_angle = 0; // 0-255 (8 bits)
+    bool ball_valid = false;
 };
 
 
@@ -95,7 +96,6 @@ const uint8_t echoPins[US_COUNT] = { ECHO_F, ECHO_R, ECHO_B, ECHO_L };
 // --- 3. External Variables ---
 // These tell the compiler "The actual memory for these is in main.cpp"
 extern TopMaixData topmaixData;
-extern BallData ballData;
 extern USSensor usData;
 extern RobotMonitor robotMonitor;
 extern RobotMonitor teammateMonitor;
@@ -119,6 +119,8 @@ void stopMotors();
 bool UI_Interface();
 void triggerUS(uint8_t i);
 void updateUS();
+void ballsensor();
+void sendMaincoreData();
 
 /*
 void echoISR(uint8_t i) {

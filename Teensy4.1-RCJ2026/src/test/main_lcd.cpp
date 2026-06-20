@@ -32,9 +32,12 @@ void setup() {
 }
 
 void loop() {
-    // Wait for UI to finish
-    while(UI_Interface()) {
-        ;
+    ballsensor();
+    if(DEFAULT_ROLE == 1) {
+        ;// Handle offense logic
+    } 
+    else if(DEFAULT_ROLE == 2) {
+        sendMaincoreData(); // Handle defense logic
+        Serial.printf("Sent ball data - Valid: %d, Angle: %d, Dist: %d\n", robotMonitor.ball_valid, robotMonitor.ball_angle, robotMonitor.ball_dist);
     }
-    Serial8.read(); // Clear the MOVE_CMD from the buffer
 }

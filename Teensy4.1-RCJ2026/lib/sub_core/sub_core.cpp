@@ -7,6 +7,7 @@ RobotStatus robot;
 MainCoreCommand mainCommand;
 GoalData goalData;
 USSensor usData;
+RobotMonitor subMonitor;
 
 // --- Sensor Data ---
 BallData ballData;
@@ -63,7 +64,24 @@ int readMux(int ch, int sig) {
     }
     return 4095;
 }
-
+void readMaincoreData() {
+    const int PACKET_SIZE = 9;
+    uint8_t buffer[PACKET_SIZE];
+    while (Serial8.available() >= PACKET_SIZE) {
+        if (Serial8.peek() != PROTOCAL_HEADER) {
+            Serial8.read(); 
+            continue;
+        }
+        Serial8.readBytes(buffer,  PACKET_SIZE );
+        if (buffer[8] == PROTOCAL_END) {
+          subMonitor.pos_x = buffer[1];
+          subMonitor.pos_y = buffer[2];
+          subMonitor.ball_valid = buffer[3] != 0;
+          subMonitor.ball_angle = (buffer[5] << 8) | buffer[4];
+          subMonitor.ball_dist = (buffer[7] << 8) | buffer[6];
+        }
+    }
+}
 void update_line_sensor(){
   lineData.state = 0xFFFFFFFF;
   
@@ -327,33 +345,6 @@ void readMotorandSendSensors() {
             // 3. Respond exactly once per received command
             Serial8.write(res, 7);
             break; 
-        }
-    }
-}
-
-void readMainPacket() {
-    static uint8_t buffer[20];
-    static int index = 0;
-
-    while (Serial8.available() > 0) {
-        uint8_t b = Serial8.read();
-        buffer[index++] = b;
-        if (index == 20) {
-            index = 0;
-            if (buffer[19] != 0xEE) continue;
-            uint8_t sum = 0;
-            for (int i = 2; i <= 17; i++) sum += buffer[i];
-            if (sum != buffer[18]) continue;
-
-            ballData.angle = (int16_t)((buffer[3] << 8) | buffer[2]);
-            ballData.dist  = (int16_t)((buffer[5] << 8) | buffer[4]);
-            ballData.valid = buffer[6] == 0xFF;
-            goalData.x     = (int16_t)((buffer[8] << 8) | buffer[7]);
-            goalData.valid = buffer[9] == 0xFF;
-            // usData.dist_ｆ       = (int16_t)((buffer[11] << 8) | buffer[10]);
-            // usData.dist_ｌ       = (int16_t)((buffer[15] << 8) | buffer[14])
-            // usData.dist_ｒ       = (int16_t)((buffer[16] << 8) | buffer[17]);
-            usData.dist_b     = (int16_t)((buffer[13] << 8) | buffer[12]);
         }
     }
 }

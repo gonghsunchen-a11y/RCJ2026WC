@@ -82,7 +82,27 @@ void drawMessage(const char* msg) {
     display.println(msg);
     display.display();
 }
-
+void ballsensor() {
+  uint8_t buffer[6];
+  Serial6.write(0xDD);
+  while(!Serial6.available());
+  Serial6.readBytes(buffer,6);
+  if(buffer[0] != 0xCC) return;
+  if (buffer[5] != 0xEE) return;
+  uint8_t found = buffer[1];
+  uint16_t angle = (uint16_t)buffer[2] | ((uint16_t)buffer[3] << 8);
+  uint8_t dist = buffer[4];
+  if (!found || angle == 0xFFFF || angle >= 360) {
+    robotMonitor.ball_valid = false;
+    robotMonitor.ball_angle = 65535; // Invalid angle
+    robotMonitor.ball_dist = 255; // Max distance
+    return;
+  }
+  Serial.printf("Ball Found! Angle: %d, Dist: %d\n", angle, dist);
+  robotMonitor.ball_valid = true;
+  robotMonitor.ball_angle = angle;
+  robotMonitor.ball_dist = dist;
+}
 void kicker_control(bool kick) {
     static uint32_t charge_start_time = 0;
     static bool is_charged = false;
@@ -122,7 +142,6 @@ void kicker_control(bool kick) {
         }
     }
 }
-
 
 void readTopMaix() {
     uint8_t buffer[12];
@@ -184,8 +203,8 @@ FASTRUN void parseSerial6Stream() {
                 Serial6.readBytes(buf, 5);
                 
                 if (buf[4] == 0xEE) {
-                    ballData.angle = (uint16_t)buf[1] | ((uint16_t)buf[2] << 8);
-                    ballData.exist = true;
+                    robotMonitor.ball_angle = (uint16_t)buf[1] | ((uint16_t)buf[2] << 8);
+                    robotMonitor.ball_valid = true;
                 }
                 break;
             }
@@ -260,6 +279,20 @@ void sendMotor(float vx, float vy, float rot_v, int target_heading) {
     // Scale down by 10 to fit 0-360 into a single byte (0-36)
     data[4] = (int8_t)(target_heading / 10);
     data[5] = PROTOCAL_END;
+    Serial8.write(data, sizeof(data));
+}
+
+void sendMaincoreData() {
+    uint8_t data[9];
+    data[0] = PROTOCAL_HEADER;
+    data[1] = robotMonitor.pos_x;
+    data[2] = robotMonitor.pos_y;
+    data[3] = robotMonitor.ball_valid ? 1 : 0;
+    data[4] = robotMonitor.ball_angle;
+    data[5] = robotMonitor.ball_angle>>8; // High byte
+    data[6] = robotMonitor.ball_dist;
+    data[7] = robotMonitor.ball_dist>>8; // High byte
+    data[8] = PROTOCAL_END;
     Serial8.write(data, sizeof(data));
 }
 
