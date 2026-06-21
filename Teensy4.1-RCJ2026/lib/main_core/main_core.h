@@ -39,13 +39,16 @@
 #define COM_O2_PIN 36
 
 // --- 1. Blueprints (Struct Definitions) ---
-struct TopMaixData {int16_t x = 0;int16_t y = 0;uint8_t status = 0;bool valid = false;bool ball_found = false;uint16_t ball_angle = 0xFFFF;uint8_t ball_dist = 0;};
+//struct TopMaixData {int16_t x = 0;int16_t y = 0;uint8_t status = 0;bool valid = false;bool ball_found = false;uint16_t ball_angle = 0xFFFF;uint8_t ball_dist = 0;};
+struct MaixPosData {int16_t x = 0;int16_t y = 0;uint8_t status = 0;bool valid = false;bool ball_found = false;uint16_t ball_angle = 0xFFFF;uint8_t ball_dist = 0;};
+
+extern MaixPosData maixPosData;
+
 
 struct BallData {
     uint16_t dist = 65535; uint16_t angle = 65535;
     bool valid = false;
 };
-
 struct USSensor {
     uint16_t dist_b = 0; uint16_t dist_l = 0;
     uint16_t dist_r = 0; uint16_t dist_f = 0;
@@ -62,13 +65,14 @@ enum class RobotRole : int8_t {
 };
 
 enum class RobotState : uint8_t { STATE_READY, STATE_CALIBRATING, STATE_SAVING };
-
 // 2. Robot state structure
 struct RobotMonitor {
     RobotRole role = RobotRole::DEFAULT; // Uses the custom enum type with a default value
     RobotState currentState = RobotState::STATE_READY;
+    bool main_valid = false;
     int8_t pos_x = 0;
     int8_t pos_y = 0;
+    int8_t pos_status=0;
     bool has_possession = false;
     float vx = 0.0f; 
     float vy = 0.0f; 
@@ -95,13 +99,10 @@ const uint8_t echoPins[US_COUNT] = { ECHO_F, ECHO_R, ECHO_B, ECHO_L };
 
 // --- 3. External Variables ---
 // These tell the compiler "The actual memory for these is in main.cpp"
-extern TopMaixData topmaixData;
 extern USSensor usData;
 extern RobotMonitor robotMonitor;
 extern RobotMonitor teammateMonitor;
 extern Adafruit_SSD1306 display;
-
-
 // --- Function Prototypes ---
 void main_core_init();
 void drawMessage(const char* msg);
@@ -121,6 +122,7 @@ void triggerUS(uint8_t i);
 void updateUS();
 void ballsensor();
 void sendMaincoreData();
+void readMaix();
 
 /*
 void echoISR(uint8_t i) {

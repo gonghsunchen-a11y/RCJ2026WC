@@ -5,6 +5,7 @@
 #define DEFAULT_ROLE 2 // 1: offense, 2: defense
 
 void setup() {
+    delay(3000); // Allow time for serial monitor to connect
     main_core_init();
     drawMessage("init");
     delay(500);
@@ -38,6 +39,11 @@ void loop() {
     } 
     else if(DEFAULT_ROLE == 2) {
         sendMaincoreData(); // Handle defense logic
-        Serial.printf("Sent ball data - Valid: %d, Angle: %d, Dist: %d\n", robotMonitor.ball_valid, robotMonitor.ball_angle, robotMonitor.ball_dist);
+        readMaix(); // Update Maix data for defense
+        Serial.print("rooboo Data - X: ");
+        Serial.print(robotMonitor.pos_x);
+        Serial.print("  Y: ");
+        Serial.println(robotMonitor.pos_y);
+        //Serial.printf("Sent ball data - Valid: %d, Angle: %d, Dist: %d\n", robotMonitor.ball_valid, robotMonitor.ball_angle, robotMonitor.ball_dist);
     }
 }

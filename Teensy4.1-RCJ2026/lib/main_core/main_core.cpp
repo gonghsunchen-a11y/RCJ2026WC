@@ -2,11 +2,12 @@
 
 
 // --- Sensor Data ---
-TopMaixData topmaixData; // Maix Position Data (x, y, status, ball info)
+//TopMaixData topmaixData; // Maix Position Data (x, y, status, ball info)
 BallData ballData;
 USSensor usData;
 RobotMonitor robotMonitor;
 RobotMonitor teammateMonitor;
+MaixPosData maixPosData;
 
 // Role Switching
 int8_t role = 0; // 0: default, 1: defense, 2: offense
@@ -92,7 +93,7 @@ void ballsensor() {
   uint8_t found = buffer[1];
   uint16_t angle = (uint16_t)buffer[2] | ((uint16_t)buffer[3] << 8);
   uint8_t dist = buffer[4];
-  if (!found || angle == 0xFFFF || angle >= 360) {
+  if (!found) {
     robotMonitor.ball_valid = false;
     robotMonitor.ball_angle = 65535; // Invalid angle
     robotMonitor.ball_dist = 255; // Max distance
@@ -143,7 +144,7 @@ void kicker_control(bool kick) {
     }
 }
 
-void readTopMaix() {
+/*void readTopMaix() {
     uint8_t buffer[12];
     Serial3.write(0xDD);
     while(!Serial3.available());
@@ -165,6 +166,33 @@ void readTopMaix() {
     else{
         topmaixData.valid = false;  // checksum error
     }
+}*/
+
+void readMaix() {
+uint32_t start = micros();
+  uint8_t buffer[10];
+  Serial3.write(0xDD);
+  //while(!Serial3.available()){Serial.println("cam");};
+  Serial3.readBytes(buffer,10);
+  robotMonitor.main_valid = 0;
+
+  if(buffer[0] == 0xCC && buffer[9] == 0xEE){
+    uint8_t checksum = (buffer[1] + buffer[2] + buffer[3] + buffer[4]+ buffer[5]+ buffer[6]+ buffer[7]) & 0xFF;
+    if(checksum == buffer[8]){
+      //Serial.printf("duration: %ld\n", micros() - start);
+      robotMonitor.main_valid = true;
+      robotMonitor.pos_x = (int8_t)(uint8_t)buffer[1];
+      robotMonitor.pos_y = (int8_t)(uint8_t)buffer[2];
+      robotMonitor.pos_status = buffer[3];
+
+      //robotMonitor.ball_found = buffer[4];
+      //robotMonitor.ball_angle = (uint16_t)buffer[5] | ((uint16_t)buffer[6] << 8);
+      //robotMonitor.ball_dist = buffer[7];
+    }
+  }
+  else{
+    robotMonitor.main_valid = false;  // checksum error
+  }
 }
 
 void roleSwitchControl() {
@@ -281,6 +309,7 @@ void sendMotor(float vx, float vy, float rot_v, int target_heading) {
     data[5] = PROTOCAL_END;
     Serial8.write(data, sizeof(data));
 }
+
 
 void sendMaincoreData() {
     uint8_t data[9];

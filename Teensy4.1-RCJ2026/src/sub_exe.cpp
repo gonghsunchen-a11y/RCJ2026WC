@@ -79,7 +79,26 @@ void defense_mode() {
         count++;
       }
     }
-    if(count > 3){
+    
+    float vx = 0, vy = 0;
+    if(count <= 3) {
+      Serial.println("No line sensors detected - returning to home position (0, -90)");
+      int dx = 0 - subMonitor.pos_x;
+      int dy = -90 - subMonitor.pos_y;
+
+      // Reduce X influence so robot returns smoothly toward Y target
+      float base_vx = dx * 0.15f;   // smaller gain on X
+      float base_vy = dy * 0.40f;   // larger gain on Y
+
+      vx = constrain(base_vx, -40.0f, 40.0f);
+      vy = constrain(base_vy, -40.0f, 40.0f);
+
+      // Prevent small X corrections from causing oscillation
+      if (fabs(vx) < 8.0f) vx = 0.0f;
+      // Ensure some minimum forward/backward speed for smooth return on Y
+      if (vy != 0 && fabs(vy) < 12.0f) vy = (vy > 0) ? 12.0f : -12.0f;
+    }
+    else if(count > 3){
       if(subMonitor.ball_valid && (subMonitor.ball_angle > 270 || subMonitor.ball_angle < 85)){
         move_deg = get_line_move_deg(7, lineData.state, 0);
       }
@@ -90,49 +109,51 @@ void defense_mode() {
         move_deg = -1;
       }
     }
-    if(move_deg < 315&& move_deg > 270&&move_deg != -1){
-      stopr = true;
-    }
-    if(move_deg < 270 && move_deg > 225&&move_deg != -1){
-      stopl = true;
-    }
-    float left_lock_deg = get_line_move_deg(7, lineData.state, 16);
-    float right_lock_deg = get_line_move_deg(7, lineData.state, 0);
-    float lock_deg = -1;
-    float lockvx = 0, lockvy = 0;
-    if(left_lock_deg != -1 || right_lock_deg != -1){
-        if (left_lock_deg != -1) {
-          float rad = left_lock_deg * M_PI / 180.0f;
-          lockvx += cosf(rad);
-          lockvy += sinf(rad);
-        }
-        if (right_lock_deg != -1) {
-          float rad = right_lock_deg * M_PI / 180.0f;
-          lockvx += cosf(rad);
-          lockvy += sinf(rad);
-        }
-        lockvx=lockvx*40;
-        lockvy=lockvy*40;
-        lock_deg = atan2f(lockvy, lockvx) * 57.2958f;
-        if (lock_deg < 0) lock_deg += 360.0f;
-    }
+    // Only execute line sensor defense logic if sensors detected
+    if(count > 3) {
+      if(move_deg < 315&& move_deg > 270&&move_deg != -1){
+        stopr = true;
+      }
+      if(move_deg < 270 && move_deg > 225&&move_deg != -1){
+        stopl = true;
+      }
+      float left_lock_deg = get_line_move_deg(7, lineData.state, 16);
+      float right_lock_deg = get_line_move_deg(7, lineData.state, 0);
+      float lock_deg = -1;
+      float lockvx = 0, lockvy = 0;
+      if(left_lock_deg != -1 || right_lock_deg != -1){
+          if (left_lock_deg != -1) {
+            float rad = left_lock_deg * M_PI / 180.0f;
+            lockvx += cosf(rad);
+            lockvy += sinf(rad);
+          }
+          if (right_lock_deg != -1) {
+            float rad = right_lock_deg * M_PI / 180.0f;
+            lockvx += cosf(rad);
+            lockvy += sinf(rad);
+          }
+          lockvx=lockvx*40;
+          lockvy=lockvy*40;
+          lock_deg = atan2f(lockvy, lockvx) * 57.2958f;
+          if (lock_deg < 0) lock_deg += 360.0f;
+      }
 
-    // 顯示左右角度和向量
-    Serial.print("Move deg: ");
-    Serial.print(move_deg);
-    float vx = 0, vy = 0;
-    if(move_deg!=-1){
-      float temp_rad = move_deg * DtoR_const;
-      vx = 40 * cosf(temp_rad);
-      vy = 40 * sinf(temp_rad);
-    }
-    vx=vx*1.5+lockvx;
-    vy=vy*0.5+lockvy*0.5;
-    if(stopr&&vx > 0){
-      vy = 0;
-    }
-    if(stopl&&vx < 0){
-      vy = 0;
+      // 顯示左右角度和向量
+      Serial.print("Move deg: ");
+      Serial.print(move_deg);
+      if(move_deg!=-1){
+        float temp_rad = move_deg * DtoR_const;
+        vx = 40 * cosf(temp_rad);
+        vy = 40 * sinf(temp_rad);
+      }
+      vx=vx*1.5+lockvx;
+      vy=vy*0.5+lockvy*0.5;
+      if(stopr&&vx > 0){
+        vy = 0;
+      }
+      if(stopl&&vx < 0){
+        vy = 0;
+      }
     }
 
     // 計算左右向量的和
@@ -145,6 +166,8 @@ void defense_mode() {
     Serial.print(vx);
     Serial.print(", vy=");
     Serial.println(vy);
+    Serial.println(subMonitor.pos_x);
+    Serial.println(subMonitor.pos_y);
 
     Vector_Motion(vx, vy, 0);
 }
