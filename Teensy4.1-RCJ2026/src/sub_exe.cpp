@@ -58,12 +58,7 @@ void defense_mode() {
     update_gyro_sensor();
     update_line_sensor();
     readMaincoreData();
-    /*
-    for(uint8_t i = 0; i < 32; i++){
-      Serial.printf("%d", (lineData.state >> i) & 1);
-    }
-    Serial.println("");
-    */
+
     float right_deg = -1;
     float left_deg = -1;
     float right_vx = 0, right_vy = 0;

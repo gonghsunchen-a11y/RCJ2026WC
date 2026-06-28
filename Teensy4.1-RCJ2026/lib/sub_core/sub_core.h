@@ -57,52 +57,24 @@ struct GyroData {
     bool exist = false;
 };
 
-
-struct BallData {
-    uint16_t dist = 255; uint16_t angle = 255;
-    uint16_t possession = 255; bool valid = false;
-    float Vx; float Vy;
-};
-
-struct Position {
-    int x; // -90 to 90, where 0 is near the center line and 90 is near the goal line
-    int y; // -120 to 120
-};
-
-struct GoalData {
-    uint16_t x = 65535; uint16_t y = 65535;
-    uint16_t w = 65535; uint16_t h = 65535;
-    bool valid = false;
-};
-
-struct USSensor {
-    uint16_t dist_b = 0; uint16_t dist_l = 0;
-    uint16_t dist_r = 0; uint16_t dist_f = 0;
-};
-enum class RobotRole : int8_t {
-    DEFAULT = 0,
-    DEFENSE = 1,
-    OFFENSE = 2
-};
-
 enum class RobotState : uint8_t { STATE_READY, STATE_CALIBRATING, STATE_SAVING };
-
 // 2. Robot state structure
 struct RobotMonitor {
-    RobotRole role = RobotRole::DEFAULT; // Uses the custom enum type with a default value
     RobotState currentState = RobotState::STATE_READY;
-    int8_t pos_x = 0; 
+    int8_t pos_x = 0;
     int8_t pos_y = 0;
-    bool has_possession = false;
     float vx = 0.0f; 
     float vy = 0.0f; 
     float rot_v = 0.0f;
     uint16_t heading = 0; // Target heading in degrees
-    //for teammate data:
     uint16_t ball_dist = 0; // 0-15 (4 bits)
     uint16_t ball_angle = 0; // 0-255 (8 bits)
     bool ball_valid = false;
+    bool has_possession = false;
+    bool strategy = false; // 0 for defense, 1 for offense
+    uint8_t role = 0; // Uses the custom enum type with a default value
 };
+
 
 // Robot global configuration and tuning parameters
 struct RobotStatus {
@@ -123,10 +95,6 @@ extern MainCoreCommand mainCommand; // Added for MainCoreCommand usage
 extern GyroData gyroData;       
 extern RobotStatus robot;        // Added to match Vector_Motion usage
 extern uint16_t avg_ls[34];
-extern BallData ballData;
-extern Position RobotPos;
-extern GoalData goalData;
-extern USSensor usData;
 extern RobotMonitor subMonitor;
 
 // --- Core Function Prototypes ---
