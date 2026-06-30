@@ -77,21 +77,30 @@ void defense_mode() {
     
     float vx = 0, vy = 0;
     if(count <= 3) {
-      Serial.println("No line sensors detected - returning to home position (0, -90)");
-      int dx = 0 - subMonitor.pos_x;
-      int dy = -90 - subMonitor.pos_y;
+      Serial.println("No line sensors detected - returning to home position (0, -80)");
+      float dx = 0.0f - subMonitor.pos_x;
+      float dy = -80.0f - subMonitor.pos_y;
+      if (subMonitor.pos_y > -90.0f && subMonitor.pos_y < -80.0f) {
+        dy = 0.0f;
+      }
+       if (subMonitor.pos_x < 30.0f && subMonitor.pos_x > -30.0f) {
+        dx = 0.0f;
+      }     
 
-      // Reduce X influence so robot returns smoothly toward Y target
-      float base_vx = dx * 0.15f;   // smaller gain on X
-      float base_vy = dy * 0.40f;   // larger gain on Y
+      // Increase the response so the robot returns to home more promptly.
+      float base_vx = dx * 0.40f;
+      float base_vy = dy * 0.40f;
 
-      vx = constrain(base_vx, -40.0f, 40.0f);
-      vy = constrain(base_vy, -40.0f, 40.0f);
+      if(base_vx !=0 && fabs(base_vx)  < 20.0f ) base_vx = (base_vx > 0) ? 20.0f : -20.0f; 
+      //Ensure some minimum forward/backward speed for smooth return on Y
+      if (base_vy != 0 && fabs(base_vy) < 20.0f) base_vy = (base_vy > 0) ? 20.0f : -20.0f;
 
-      // Prevent small X corrections from causing oscillation
-      if (fabs(vx) < 8.0f) vx = 0.0f;
-      // Ensure some minimum forward/backward speed for smooth return on Y
-      if (vy != 0 && fabs(vy) < 12.0f) vy = (vy > 0) ? 12.0f : -12.0f;
+      vx = constrain(base_vx, -80.0f, 80.0f);
+      vy = constrain(base_vy, -80.0f, 80.0f);
+
+      // Only dead-band near-zero noise; avoid forcing a minimum speed that makes the return feel sluggish.
+      if (fabsf(vx) < 4.0f) vx = 0.0f;
+      if (fabsf(vy) < 4.0f) vy = 0.0f;
     }
     else if(count > 3){
       if(subMonitor.ball_valid && (subMonitor.ball_angle > 270 || subMonitor.ball_angle < 85)){
@@ -163,7 +172,6 @@ void defense_mode() {
     Serial.println(vy);
     Serial.println(subMonitor.pos_x);
     Serial.println(subMonitor.pos_y);
-
     Vector_Motion(vx, vy, 0);
 }
 void loop(){

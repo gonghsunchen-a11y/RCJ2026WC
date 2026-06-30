@@ -239,46 +239,28 @@ void defense_mode3(){
   static int avoid_timer = 0;
   static float avoid_vx = 0.0f, avoid_vy = 0.0f;
 
-  if (count <= 3) {
-    Serial.printf("subMonitor.pos_x %f subMonitor.pos_y %f\n", subMonitor.pos_x, subMonitor.pos_y);
-    float dx = 0.0f   - subMonitor.pos_x;
-    float dy = -90.0f - subMonitor.pos_y;
-    vx = constrain(dx * 0.15f, -40.0f, 40.0f);
-    vy = constrain(dy * 0.40f, -40.0f, 40.0f);
-    if (fabsf(vx) < 8.0f) vx = 0.0f;
-    if (vy != 0.0f && fabsf(vy) < 20.0f) vy = (vy > 0.0f) ? 20.0f : -20.0f;
-    
-
-    if (subMonitor.ball_valid && subMonitor.ball_dist > 0) {
-      float pdx = dx;
-      float pdy = dy;
-      float pathLen = sqrtf(pdx * pdx + pdy * pdy);
-      if (pathLen > 5.0f) {
-        float ballRad = (gyroData.heading + subMonitor.ball_angle) * M_PI / 180.0f;
-        float bx = subMonitor.pos_x + subMonitor.ball_dist * cosf(ballRad);
-        float by = subMonitor.pos_y + subMonitor.ball_dist * sinf(ballRad);
-        float relx = bx - subMonitor.pos_x;
-        float rely = by - subMonitor.pos_y;
-        float proj = (relx * pdx + rely * pdy) / pathLen;
-        float perp_x = relx - proj * (pdx / pathLen);
-        float perp_y = rely - proj * (pdy / pathLen);
-        float perpDist = sqrtf(perp_x * perp_x + perp_y * perp_y);
-        const float SAFETY_DIST = 30.0f;
-        if (proj > 0.0f && proj < pathLen && perpDist < SAFETY_DIST) {
-          float avoid_deg = gyroData.heading + subMonitor.ball_angle - 30.0f;
-          float rad = avoid_deg * M_PI / 180.0f;
-          avoid_vx = 40.0f * cosf(rad);
-          avoid_vy = 40.0f * sinf(rad);
-          avoid_timer = 25;
-        }
-      }
+  if(count <= 3) {
+    Serial.println("No line sensors detected - returning to home position (0, -80)");
+    float dx = 0.0f - subMonitor.pos_x;
+    float dy = -80.0f - subMonitor.pos_y;
+    if (subMonitor.pos_y > -88.0f && subMonitor.pos_y < -75.0f) {
+      dy = 0.0f;
     }
+     if (subMonitor.pos_x < 30.0f && subMonitor.pos_x > -30.0f) {
+      dx = 0.0f;
+    }     
+    // Increase return-home response so the robot moves faster toward the target.
+    float base_vx = dx * 0.80f;
+    float base_vy = dy * 0.85f;
 
-    if (avoid_timer > 0) {
-      vx = avoid_vx;
-      vy = avoid_vy;
-      avoid_timer--;
-    }
+    if (base_vx != 0.0f && fabsf(base_vx) < 24.0f) base_vx = (base_vx > 0.0f) ? 24.0f : -24.0f;
+    if (base_vy != 0.0f && fabsf(base_vy) < 20.0f) base_vy = (base_vy > 0.0f) ? 20.0f : -20.0f;
+
+    vx = constrain(base_vx, -120.0f, 120.0f);
+    vy = constrain(base_vy, -120.0f, 120.0f);
+
+    if (fabsf(vx) < 6.0f) vx = 0.0f;
+    if (fabsf(vy) < 6.0f) vy = 0.0f;
   }
   else{
     float right_deg = get_line_move_deg(11, lineData.state, 0);
@@ -292,6 +274,10 @@ void defense_mode3(){
     float lock_deg = atan2(y_sum, x_sum) * 57.2958f;
     if (lock_deg < 0) lock_deg += 360.0f;
     float mag = sqrt(y_sum * y_sum + x_sum * x_sum);//index of checking how far the robot have shifted from the line
+    float abs_x = fabsf((float)subMonitor.pos_x);
+    float ratio = constrain(abs_x / 30.0f, 0.0f, 1.0f);
+    float speed = 60.0f - (20.0f * ratio);
+    speed = constrain(speed, 40.0f, 60.0f);
     if(ball_on_right){
       move_deg = right_deg;
     }
@@ -300,14 +286,15 @@ void defense_mode3(){
     }
     if(move_deg != -1){
       float move_rad = move_deg * DtoR_const;
-      vx = 40.0f * cosf(move_rad);
-      vy = 40.0f * sinf(move_rad);
+      vx = speed * cosf(move_rad);
+      vy = speed * sinf(move_rad);
     }
     else if(lock_deg != -1){
-      float lock_rad = lock_deg * DtoR_const;;
-      vx = mag * 15 * cosf(lock_rad);
-      vy = mag * 15 * sinf(lock_rad);
+      float lock_rad = lock_deg * DtoR_const;
+      vx = mag * 20.0f * cosf(lock_rad);
+      vy = mag * 20.0f * sinf(lock_rad);
     }
+
     if(top_deg != -1 && down_deg != -1 && abs(down_deg - 270) < 45){
       Serial.println("side");
       float escape_deg = get_line_move_deg(9, lineData.state, 8);
@@ -329,8 +316,8 @@ void defense_mode3(){
       }
       if(move_deg != -1){
         float move_rad = move_deg * DtoR_const;
-        vx = 40.0f * cosf(move_rad);
-        vy = 40.0f * sinf(move_rad);
+        vx = speed * cosf(move_rad);
+        vy = speed * sinf(move_rad);
       }
       else{
         vx = 0;
@@ -350,8 +337,8 @@ void defense_mode3(){
   Serial.print(vx);
   Serial.print(", vy=");
   Serial.print(vy);
-  Serial.print(" | gyro_heading=");
-  Serial.println(gyroData.heading);
+  
+  
   Serial.print(" | pos_x=");
   Serial.println(subMonitor.pos_x);
   Serial.print(" | pos_y=");

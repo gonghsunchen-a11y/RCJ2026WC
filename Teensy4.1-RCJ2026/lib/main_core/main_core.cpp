@@ -434,7 +434,8 @@ void sensor_fusion() {
     //            but becomes noisier
     //   Increase this if your robot moves fast or estimate feels sluggish.
     // =========================================================
-    const float CAMERA_NOISE     = 0.05f;
+    //const float CAMERA_NOISE     = 0.05f;
+    const float CAMERA_NOISE     = 0.075f;
     const float ULTRASONIC_NOISE = 0.20f;
     const float PROCESS_NOISE    = 0.01f;
 
@@ -697,7 +698,7 @@ void updateUSCoordinate() {
 void updateUS() {
     static uint8_t  current_us        = US_COUNT - 1;
     static uint32_t last_trigger_time = 0;
-    if (millis() - last_trigger_time >= 50) {
+    if (millis() - last_trigger_time >= 30) {
         last_trigger_time = millis();
         current_us = (current_us + 1) % US_COUNT;
         echo_done[current_us] = false;
