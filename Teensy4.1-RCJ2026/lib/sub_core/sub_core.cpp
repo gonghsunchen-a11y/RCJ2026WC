@@ -6,8 +6,11 @@ GyroData gyroData;
 MainCoreCommand mainCommand;
 RobotMonitor subMonitor;
 RobotStatus robot;        // Added to match Vector_Motion usage
-
 uint16_t avg_ls[34];
+
+uint8_t left_us = 0;
+uint8_t right_us = 0;
+uint8_t back_us = 0;
 
 void sub_core_init() {
     Serial8.begin(921600); // For communication with MainCore
@@ -59,7 +62,7 @@ int readMux(int ch, int sig) {
     return 4095;
 }
 void readMaincoreData() {
-    const int PACKET_SIZE = 10; // Header + 8 bytes of data + End byte
+    const int PACKET_SIZE = 13; // Header + 10 bytes of data + End byte
     uint8_t buffer[PACKET_SIZE];
     while (Serial8.available() >= PACKET_SIZE) {
         if (Serial8.peek() != PROTOCAL_HEADER) {
@@ -67,13 +70,16 @@ void readMaincoreData() {
             continue;
         }
         Serial8.readBytes(buffer,  PACKET_SIZE );
-        if (buffer[9] == PROTOCAL_END) {
+        if (buffer[12] == PROTOCAL_END) {
           subMonitor.pos_x = buffer[1];
           subMonitor.pos_y = buffer[2];
           subMonitor.ball_valid = buffer[3] != 0;
           subMonitor.ball_angle = (buffer[5] << 8) | buffer[4];
           subMonitor.ball_dist = (buffer[7] << 8) | buffer[6];
-          subMonitor.role = buffer[8];
+          left_us = buffer[8];  // Reserved for left ultrasonic distance
+          right_us = buffer[9]; // Reserved for right ultrasonic distance
+          back_us = buffer[10]; // Reserved for back ultrasonic distance
+          subMonitor.role = buffer[11];
         }
     }
 }

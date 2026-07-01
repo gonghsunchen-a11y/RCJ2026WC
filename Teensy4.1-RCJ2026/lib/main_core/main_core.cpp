@@ -188,7 +188,7 @@ void roleSwitchControl() {
 
 void update_all_sensor(){
     ballsensor();
-    readTopMaix();
+    //readTopMaix();
     updateUS();
 }
 /*
@@ -406,7 +406,7 @@ void sensor_fusion() {
     // =========================================================
     static bool     first_run  = true;
     static float    est_x      = 0.0f;   // current best estimate of robot X
-    static float    est_y      = 0.0f;   // current best estimate of robot Y
+    static float    est_y      = -80.0f;   // current best estimate of robot Y
     static float    unc_x      = 999.0f; // how uncertain we are about X (starts very high)
     static float    unc_y      = 999.0f; // how uncertain we are about Y (starts very high)
     static uint32_t last_time  = 0;
@@ -550,7 +550,7 @@ void sendMotor(float vx, float vy, float rot_v, int target_heading) {
 }
 
 void sendMaincoreData() {
-    uint8_t data[10];
+    uint8_t data[13];
     data[0] = PROTOCAL_HEADER;
     data[1] = robotMonitor.pos_x;
     data[2] = robotMonitor.pos_y;
@@ -559,8 +559,11 @@ void sendMaincoreData() {
     data[5] = robotMonitor.ball_angle>>8; // High byte
     data[6] = robotMonitor.ball_dist;
     data[7] = robotMonitor.ball_dist>>8; // High byte
-    data[8] = robotMonitor.role; // Reserved
-    data[9] = PROTOCAL_END;
+    data[8] = usData.dist_cm[US_LEFT]; // Reserved
+    data[9] = usData.dist_cm[US_RIGHT]; // Reserved
+    data[10] = usData.dist_cm[US_BACK]; // Reserved
+    data[11] = robotMonitor.role; // Reserved
+    data[12] = PROTOCAL_END;
     Serial8.write(data, sizeof(data));
 }
 
@@ -592,15 +595,11 @@ bool UI_Interface(){
                 display.display();
                 lastDisplayTime = millis();
             }
-            if(digitalRead(BTN_UP) == LOW){
+            if(digitalRead(BTN_UP) == LOW || (digitalRead(COM_O1_PIN) == HIGH && digitalRead(COM_O2_PIN) == HIGH)){
                 display.clearDisplay();
                 display.display();
                 return false;
             }
-            //offense
-
-            //defense
-
             break;
         case RobotState::STATE_CALIBRATING:
             if (digitalRead(BTN_ESC) == LOW) {

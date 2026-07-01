@@ -96,6 +96,9 @@ extern GyroData gyroData;
 extern RobotStatus robot;        // Added to match Vector_Motion usage
 extern uint16_t avg_ls[34];
 extern RobotMonitor subMonitor;
+extern uint8_t left_us;
+extern uint8_t right_us;
+extern uint8_t back_us;
 
 // --- Core Function Prototypes ---
 void sub_core_init();
